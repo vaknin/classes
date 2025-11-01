@@ -1,94 +1,84 @@
-# College Calendar Scraper
+<div align="center">
 
-Automated scraper for fetching your college's calendar from ASP.NET-based websites that don't provide downloadable versions.
+# 📅 College Calendar Importer
 
-## Features
+*Automatically scrape & import your college schedule to Google Calendar*
 
-- Handles ASP.NET ViewState and session management
-- Automatically paginates through all pages
-- Saves HTML pages for later parsing
-- Uses secure cookie-based authentication
+---
 
-## Setup
+### 🎯 What it does
 
-1. **Install dependencies**:
-   ```bash
-   uv sync
-   ```
+Scrapes your college's ASP.NET calendar → Generates color-coded ICS files → Import to Google Calendar
 
-2. **Create your config file**:
-   ```bash
-   cp config.template.json config.json
-   ```
+**🔵 Blue** for Zoom classes • **🟡 Yellow** for Mondays • **🔴 Red** for in-person
 
-3. **Get your session cookies**:
-   - Open your browser and log into your college portal
-   - Navigate to the calendar/schedule page
-   - Open Developer Tools (F12)
-   - Go to the Network tab
-   - Refresh the page or click on a pagination link
-   - Find the request to `StudentScheduleList.aspx`
-   - Look for the Cookie header in the request
-   - Copy the `BCI_OL_KEY` value
+---
 
-4. **Update config.json**:
-   ```json
-   {
-     "url": "https://live.or-bit.net/gordon/StudentScheduleList.aspx",
-     "cookies": {
-       "BCI_OL_KEY": "paste_your_actual_key_here",
-       "OrbitLivePresentationTypeByCookie": "GridView"
-     },
-     "form_data": {
-       "ctl00$cmbActiveYear": "2026",
-       "ctl00$OLToolBar1$ctl03$dtFromDate$dtdtFromDate": "01/11/2025",
-       "ctl00$OLToolBar1$ctl03$dtToDate$dtdtToDate": "",
-       "ctl00$btnOkAgreement": "אישור"
-     }
-   }
-   ```
+</div>
 
-## Usage
+## ⚡ Quick Start
 
-Run the scraper:
+**1. Install**
+```bash
+uv sync
+```
+
+**2. Configure**
+```bash
+cp config.template.json config.json
+```
+Get your session cookie from browser DevTools (F12 → Network tab → `BCI_OL_KEY`)
+
+**3. Scrape**
 ```bash
 uv run college_calender.py
 ```
 
-The script will:
-1. Connect to your college portal using your session cookies
-2. Fetch the first page to determine total page count
-3. Iterate through all pages
-4. Save each page as HTML in the `output/` directory
+**4. Generate calendars**
+```bash
+uv run generate_ics.py --split
+```
 
-## Output
+**5. Import to Google Calendar**
+- Create 3 calendars: "Zoom", "Rom", "F2F"
+- Import each ICS file to its calendar
+- Set colors: Blue, Yellow, Red
 
-HTML files are saved in `output/page_001.html`, `output/page_002.html`, etc.
+<div align="center">
 
-## Troubleshooting
+---
 
-### "Config not found" error
-Make sure you've created `config.json` from the template.
+✨ **227 classes** • **3 calendars** • **0 manual work** ✨
 
-### "Please update config.json" error
-You need to replace `YOUR_SESSION_KEY_HERE` with your actual `BCI_OL_KEY` cookie value.
+</div>
 
-### Authentication errors
-Your session cookies may have expired. Log in again and get fresh cookies from the Network tab.
+## 📂 What you get
 
-### No pages found
-Check that the form_data in config.json matches the expected format for your college's system.
+```
+F2F.ics   → 99 in-person classes (Red)
+Zoom.ics  → 96 online classes (Blue)
+Rom.ics   → 32 Monday classes (Yellow)
+```
 
-## Notes
+## 🎨 Smart Color Rules
 
-- Session cookies expire after a period of inactivity. You'll need to refresh them periodically.
-- The scraper adds a 0.5 second delay between page requests to be respectful to the server.
-- The `config.json` file is gitignored to protect your credentials.
+- 🔵 Zoom classes (note contains "זום")
+- 🔵 Sync online courses (even on Monday)
+- 🟡 Monday classes (ב')
+- 🔴 Everything else
 
-## Next Steps
+## 🛠️ Files
 
-Once you have the HTML files, you can:
-1. Parse them to extract calendar events
-2. Convert to ICS format for importing into Google Calendar
-3. Export as CSV for spreadsheet analysis
-4. Generate PDF reports
+| File | Purpose |
+|------|---------|
+| `college_calender.py` | Scrape website → save HTML |
+| `generate_ics.py` | Parse HTML → generate ICS |
+| `config.json` | Your credentials (gitignored) |
+
+<div align="center">
+
+---
+
+Made with 🤖 by Claude Code
+
+</div>
