@@ -1,0 +1,22 @@
+# Config with sensitive cookies
+config.json
+
+# Output directory
+output/
+
+# Generated calendar files
+*.ics
+
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# UV lock file
+uv.lock
