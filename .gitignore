@@ -4,9 +4,6 @@ config.json
 # Output directory
 output/
 
-# Generated calendar files
-*.ics
-
 # Python-generated files
 __pycache__/
 *.py[oc]
