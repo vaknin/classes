@@ -345,22 +345,33 @@ def main():
         # Generate 3 separate files by color
         print(f"\nGenerating 3 separate ICS files from {len(classes)} classes...")
 
+        # Count events by color
+        blue_count = len([c for c in classes if generator.assign_color(c) == generator.COLOR_BLUE])
+        yellow_count = len([c for c in classes if generator.assign_color(c) == generator.COLOR_YELLOW])
+        red_count = len([c for c in classes if generator.assign_color(c) == generator.COLOR_RED])
+
+        total_events = blue_count + yellow_count + red_count
+        if total_events == 0:
+            print("ERROR: No events generated! Check date range and HTML parsing.")
+            print("This could mean:")
+            print("  - No classes in the scraped date range")
+            print("  - HTML structure has changed")
+            print("  - All classes were filtered out (00:00 start time)")
+            return 1
+
         # Blue - Zoom classes
         blue_cal = generator.generate_calendar(classes, calendar_name='Zoom Classes', color_filter=generator.COLOR_BLUE)
         generator.save_calendar(blue_cal, 'Zoom.ics')
-        blue_count = len([c for c in classes if generator.assign_color(c) == generator.COLOR_BLUE])
         print(f"  - Zoom.ics: {blue_count} classes (Blue)")
 
         # Yellow - Monday classes (Rom)
         yellow_cal = generator.generate_calendar(classes, calendar_name='Rom Classes', color_filter=generator.COLOR_YELLOW)
         generator.save_calendar(yellow_cal, 'Rom.ics')
-        yellow_count = len([c for c in classes if generator.assign_color(c) == generator.COLOR_YELLOW])
         print(f"  - Rom.ics: {yellow_count} classes (Yellow - Monday)")
 
         # Red - F2F classes
         red_cal = generator.generate_calendar(classes, calendar_name='F2F Classes', color_filter=generator.COLOR_RED)
         generator.save_calendar(red_cal, 'F2F.ics')
-        red_count = len([c for c in classes if generator.assign_color(c) == generator.COLOR_RED])
         print(f"  - F2F.ics: {red_count} classes (Red - Face-to-Face)")
 
         print(f"\n{'='*80}")

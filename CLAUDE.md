@@ -1,15 +1,54 @@
-# College classes calender importer
+# College Calendar Automation System
 
 ## GOAL
-We want to have all classes to be written to my google calendar.
-Ideally, I want each class to have a different color, to have its time listed in the correct date, show the "notes" )הערה) value in the google calendar event description, teacher's name, etc.
+Automatically scrape college class schedules and sync them to Google Calendar with color-coded categories.
 
-## Notes
-- We'll generate an ICS file to import it to google calendar
-- if 'starting time' (שעת התחלה) column's value is 00:00, ignore this class
-- all classes on mondays (ב) should have the same color - yellow
-- if the note column's value is 'זום' then mark it blue color
-- some class names have "(ENG)" in their name, remove the '(ENG)' from the name, example: "Math (ENG)" will become "Math"
-- if color is not yellow (monday) and not zoom (blue) - then make it red.
-- course name: "מפילוסופיה לכיתה (מקוון סינכרוני)" is zoom, remove the parenthesis that say it's sync via zoom, and mark it blue and not yellow even that it's on monday
-- if the notes don't say anthing, assume it's in college i.e. red color (unless it's on monday)
+## System Architecture
+
+### Automation Flow
+1. **Auto-login**: `refresh_cookies.py` logs in using credentials from `.env`
+2. **Scrape**: `college_calender.py` fetches all calendar pages with dynamic date calculation
+3. **Generate ICS**: `generate_ics.py` creates 3 separate ICS files by category
+4. **Sync to GitHub**: `run_pipeline.sh` commits and pushes changes
+5. **Scheduled**: systemd timer runs weekly (Saturday 3 AM)
+
+### Configuration
+- **Credentials**: Stored in `.env` (USERNAME, PASSWORD)
+- **Academic Year**: Auto-calculated (if month >= October: year+1, else year)
+- **Date Range**: Automatically fetches last 7 days of classes
+- **No manual config needed** - everything is automated
+
+## ICS Generation Rules
+
+### Color Categories (3 separate files)
+- **Blue (Zoom.ics)**: Online/Zoom classes
+  - Note contains 'זום'
+  - Course name contains 'מקוון סינכרוני'
+- **Yellow (Rom.ics)**: Monday classes
+  - Day is 'ב' (Monday)
+  - Unless it's a Zoom class (blue takes priority)
+- **Red (F2F.ics)**: In-person classes
+  - Everything else (default)
+
+### Data Processing
+- **Filter**: Ignore classes with start time 00:00
+- **Clean names**: Remove "(ENG)" and "(מקוון סינכרוני)" from course names
+- **Include**: Teacher name and notes in event description
+- **Location**: Room number as event location
+
+## Files
+
+### Core Scripts
+- `refresh_cookies.py` - Auto-login and session management
+- `college_calender.py` - Web scraper with ASP.NET ViewState handling
+- `generate_ics.py` - ICS file generator with color coding
+- `run_pipeline.sh` - Main automation orchestrator
+
+### Configuration
+- `.env` - Login credentials (gitignored)
+- `.cookies.json` - Session cookies (auto-generated, gitignored)
+- `systemd/*.{service,timer}` - Weekly automation
+
+### Output
+- `output/page_*.html` - Raw HTML pages (gitignored)
+- `F2F.ics`, `Zoom.ics`, `Rom.ics` - Calendar files (committed to git)

@@ -1,8 +1,13 @@
-# Config with sensitive cookies
+# Secrets and credentials
+.env
+.cookies.json
 config.json
 
 # Output directory
 output/
+
+# Log files
+logs/
 
 # Python-generated files
 __pycache__/

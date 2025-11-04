@@ -5,10 +5,18 @@ Handles ViewState and pagination to fetch all class schedules
 """
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from bs4 import BeautifulSoup
 import json
 import time
+from datetime import datetime, timedelta
+from pathlib import Path
 from urllib.parse import unquote
+
+# Configuration constants
+ACADEMIC_YEAR_START_MONTH = 10  # October - when new academic year begins
+SCRAPE_LOOKBACK_DAYS = 7  # How many days back to fetch classes
 
 class CollegeCalendarScraper:
     def __init__(self, url, cookies):
@@ -21,6 +29,21 @@ class CollegeCalendarScraper:
         """
         self.url = url
         self.session = requests.Session()
+
+        # Configure retry strategy
+        retry_strategy = Retry(
+            total=3,
+            backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["HEAD", "GET", "POST"]
+        )
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        self.session.mount("http://", adapter)
+        self.session.mount("https://", adapter)
+
+        # Set timeout for all requests (connect timeout, read timeout)
+        self.timeout = (10, 30)
+
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:144.0) Gecko/20100101 Firefox/144.0',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -41,6 +64,35 @@ class CollegeCalendarScraper:
             self.session.cookies.set(key, value)
 
         self.viewstate_data = {}
+
+    def validate_session(self):
+        """
+        Validate that session cookies are working
+
+        Returns:
+            True if session is valid
+
+        Raises:
+            ValueError if session is invalid or cookies expired
+        """
+        try:
+            print("Validating session cookies...")
+            response = self.session.get(self.url, timeout=self.timeout)
+            response.raise_for_status()
+
+            # Check if we got redirected to login page
+            if 'login' in response.url.lower():
+                raise ValueError("Session cookies have expired - redirected to login page")
+
+            # Check for typical login indicators in the HTML
+            if 'כניסה למערכת' in response.text or 'התחברות' in response.text:
+                raise ValueError("Session cookies are invalid - login page detected")
+
+            print("Session validation successful")
+            return True
+
+        except requests.exceptions.RequestException as e:
+            raise ValueError(f"Session validation failed: {e}")
 
     def extract_form_fields(self, html):
         """
@@ -175,12 +227,12 @@ class CollegeCalendarScraper:
                 # Add form data
                 data.update(form_data)
 
-                response = self.session.post(self.url, data=data)
+                response = self.session.post(self.url, data=data, timeout=self.timeout)
                 response.raise_for_status()
                 return response.text
             else:
                 # Initial GET request
-                response = self.session.get(self.url)
+                response = self.session.get(self.url, timeout=self.timeout)
                 response.raise_for_status()
                 return response.text
         else:
@@ -198,7 +250,7 @@ class CollegeCalendarScraper:
             if form_data:
                 data.update(form_data)
 
-            response = self.session.post(self.url, data=data)
+            response = self.session.post(self.url, data=data, timeout=self.timeout)
             response.raise_for_status()
             return response.text
 
@@ -250,8 +302,8 @@ class CollegeCalendarScraper:
             pages.append(html)
             previous_data_rows = current_data_rows
 
-            # Be nice to the server
-            time.sleep(0.5)
+            # No sleep needed - requests.Session handles connection pooling
+            # and retry logic handles rate limiting if needed
 
         print(f"Successfully fetched {len(pages)} pages")
         return pages
@@ -266,6 +318,9 @@ class CollegeCalendarScraper:
         """
         import os
 
+        if not pages:
+            raise ValueError("No pages to save - scraping returned empty result")
+
         os.makedirs(output_dir, exist_ok=True)
 
         for i, page in enumerate(pages, 1):
@@ -276,35 +331,79 @@ class CollegeCalendarScraper:
         print(f"Saved {len(pages)} pages to {output_dir}/")
 
 
-def load_config(config_path='config.json'):
-    """Load configuration from JSON file"""
-    import os
+def load_cookies():
+    """Load cookies from .cookies.json file"""
+    cookies_file = Path(__file__).parent / '.cookies.json'
 
-    if not os.path.exists(config_path):
-        print(f"Error: {config_path} not found!")
-        print("Please copy config.template.json to config.json and fill in your credentials.")
+    if not cookies_file.exists():
+        print(f"Error: {cookies_file} not found!")
+        print("Run refresh_cookies.py first to generate session cookies.")
         exit(1)
 
-    with open(config_path, 'r', encoding='utf-8') as f:
+    with open(cookies_file, 'r', encoding='utf-8') as f:
         return json.load(f)
+
+def get_academic_year():
+    """
+    Calculate academic year based on current date.
+    Academic year transitions in October (semester 1 starts).
+
+    Examples:
+        September 2025 → 2025 (still in 2024-2025 academic year)
+        October 2025 → 2026 (now in 2025-2026 academic year)
+        April 2026 → 2026 (still in 2025-2026 academic year)
+
+    Returns:
+        int: Academic year (e.g., 2026 for the 2025-2026 year)
+    """
+    now = datetime.now()
+    if now.month >= ACADEMIC_YEAR_START_MONTH:
+        return now.year + 1
+    else:
+        return now.year
+
+def get_start_date():
+    """
+    Get start date for scraping.
+
+    Fetches classes from the past SCRAPE_LOOKBACK_DAYS days to ensure
+    we don't miss any recent schedule changes.
+
+    Returns:
+        str: Date in DD/MM/YYYY format (e.g., "28/10/2025")
+    """
+    start_date = datetime.now() - timedelta(days=SCRAPE_LOOKBACK_DAYS)
+    return start_date.strftime('%d/%m/%Y')
 
 
 def main():
-    # Load configuration
-    config = load_config()
+    # Configuration
+    URL = "https://live.or-bit.net/gordon/StudentScheduleList.aspx"
 
-    URL = config['url']
-    COOKIES = config['cookies']
-    INITIAL_FORM_DATA = config.get('form_data', None)
+    # Load cookies from file
+    COOKIES = load_cookies()
 
-    # Validate cookies
-    if COOKIES.get('BCI_OL_KEY') == 'YOUR_SESSION_KEY_HERE':
-        print("Error: Please update config.json with your actual session cookies!")
-        print("You can find these in your browser's Network tab.")
-        exit(1)
+    # Build form data dynamically
+    INITIAL_FORM_DATA = {
+        'ctl00$cmbActiveYear': str(get_academic_year()),
+        'ctl00$OLToolBar1$ctl03$dtFromDate$dtdtFromDate': get_start_date(),
+        'ctl00$OLToolBar1$ctl03$dtToDate$dtdtToDate': '',
+        'ctl00$btnOkAgreement': 'אישור'
+    }
+
+    print(f"Academic Year: {get_academic_year()}")
+    print(f"Start Date: {get_start_date()}")
 
     # Create scraper
     scraper = CollegeCalendarScraper(URL, COOKIES)
+
+    # Validate session before scraping
+    try:
+        scraper.validate_session()
+    except ValueError as e:
+        print(f"\nError: {e}")
+        print("Session cookies are invalid. Run refresh_cookies.py to get fresh cookies.")
+        exit(1)
 
     # Scrape all pages
     pages = scraper.scrape_all_pages(initial_form_data=INITIAL_FORM_DATA)

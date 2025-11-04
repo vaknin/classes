@@ -1,0 +1,15 @@
+[Unit]
+Description=College Calendar Weekly Update Timer
+
+[Timer]
+# Run every Saturday at 3:00 AM
+OnCalendar=Sat *-*-* 03:00:00
+
+# Run immediately if the computer was off during scheduled time
+Persistent=true
+
+# Add a random delay of 0-5 minutes to avoid load spikes
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target
