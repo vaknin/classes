@@ -1,129 +1,62 @@
 #!/usr/bin/env python3
 """
-Generate ICS calendar files from scraped HTML pages
+Generate ICS calendar files from JSON class data
 """
 
 from datetime import datetime, timedelta
 from pathlib import Path
-from bs4 import BeautifulSoup
+import json
 from icalendar import Calendar, Event
 
 
-class CalendarParser:
-    """Parse HTML calendar pages and extract class information"""
+class JSONLoader:
+    """Load class data from JSON file"""
 
-    def __init__(self, output_dir='output'):
+    def __init__(self, json_file='output/json/classes.json'):
         """
-        Initialize the parser
+        Initialize the loader
 
         Args:
-            output_dir: Directory containing the scraped HTML pages
+            json_file: Path to JSON file containing class data
         """
-        self.output_dir = Path(output_dir)
+        self.json_file = Path(json_file)
 
-    def parse_all_pages(self):
+    def load_classes(self):
         """
-        Parse all HTML pages and extract class data
+        Load and process classes from JSON file
 
         Returns:
             List of dictionaries containing class information
         """
-        all_classes = []
-
-        # Find all HTML files in output directory
-        html_files = sorted(self.output_dir.glob('page_*.html'))
-
-        if not html_files:
-            print(f"No HTML files found in {self.output_dir}/")
+        if not self.json_file.exists():
+            print(f"No JSON file found at {self.json_file}")
             return []
 
-        print(f"Found {len(html_files)} HTML files to parse")
+        print(f"Loading classes from JSON...", end=" ", flush=True)
 
-        for html_file in html_files:
-            classes = self.parse_page(html_file)
-            all_classes.extend(classes)
-            print(f"Parsed {html_file.name}: {len(classes)} classes")
+        with open(self.json_file, 'r', encoding='utf-8') as f:
+            classes = json.load(f)
 
-        print(f"\nTotal classes extracted: {len(all_classes)}")
+        print(f"done")
+        print(f"✓ Loaded {len(classes)} classes from {self.json_file}")
 
         # Filter out classes with 00:00 start time
-        filtered_classes = [c for c in all_classes if c['start_time'] != '00:00']
-        removed_count = len(all_classes) - len(filtered_classes)
+        filtered_classes = [c for c in classes if c['start_time'] != '00:00']
+        removed_count = len(classes) - len(filtered_classes)
 
         if removed_count > 0:
-            print(f"Filtered out {removed_count} classes with 00:00 start time")
+            print(f"  Filtered out {removed_count} classes with 00:00 start time")
+
+        # Parse dates and add date objects for sorting
+        for class_info in filtered_classes:
+            try:
+                class_info['date_obj'] = datetime.strptime(class_info['date'], '%d/%m/%Y').date()
+            except (ValueError, KeyError):
+                # If _date_obj exists from parse_html, use it
+                if '_date_obj' in class_info:
+                    class_info['date_obj'] = datetime.fromisoformat(class_info['_date_obj']).date()
 
         return filtered_classes
-
-    def parse_page(self, html_file):
-        """
-        Parse a single HTML page and extract classes
-
-        Args:
-            html_file: Path to HTML file
-
-        Returns:
-            List of class dictionaries
-        """
-        with open(html_file, 'r', encoding='utf-8') as f:
-            html = f.read()
-
-        soup = BeautifulSoup(html, 'html.parser')
-
-        # Find the data table
-        table = soup.find('table', {'id': 'ContentPlaceHolder1_gvData'})
-
-        if not table:
-            return []
-
-        classes = []
-
-        # Get all rows except the header (first row)
-        rows = table.find_all('tr', class_='GridRow')
-
-        for row in rows:
-            cells = row.find_all('td')
-
-            if len(cells) < 8:
-                continue
-
-            # Extract text from each cell
-            date_str = cells[0].get_text(strip=True)
-            day = cells[1].get_text(strip=True)
-            start_time = cells[2].get_text(strip=True)
-            end_time = cells[3].get_text(strip=True)
-            course_name = cells[4].get_text(strip=True)
-            teachers = cells[5].get_text(strip=True)
-            room = cells[6].get_text(strip=True)
-            note = cells[7].get_text(strip=True)
-
-            # Skip empty rows
-            if not date_str or not start_time:
-                continue
-
-            # Parse date (DD/MM/YYYY format)
-            try:
-                date_obj = datetime.strptime(date_str, '%d/%m/%Y').date()
-            except ValueError:
-                print(f"Warning: Could not parse date '{date_str}'")
-                continue
-
-            # Create class dictionary
-            class_info = {
-                'date': date_obj,
-                'date_str': date_str,
-                'day': day,
-                'start_time': start_time,
-                'end_time': end_time,
-                'course_name': course_name,
-                'teachers': teachers,
-                'room': room,
-                'note': note,
-            }
-
-            classes.append(class_info)
-
-        return classes
 
 
 class ICSGenerator:
@@ -192,14 +125,14 @@ class ICSGenerator:
         start_hour, start_min = map(int, start_time_str.split(':'))
         end_hour, end_min = map(int, end_time_str.split(':'))
 
-        # Combine date and time
+        # Combine date and time (use date_obj which is a date object)
         start_datetime = datetime.combine(
-            class_info['date'],
+            class_info['date_obj'],
             datetime.min.time().replace(hour=start_hour, minute=start_min)
         )
 
         end_datetime = datetime.combine(
-            class_info['date'],
+            class_info['date_obj'],
             datetime.min.time().replace(hour=end_hour, minute=end_min)
         )
 
@@ -316,19 +249,18 @@ class ICSGenerator:
 
 
 def main():
-    """Generate ICS calendar files from parsed HTML"""
+    """Generate ICS calendar files from JSON class data"""
     import argparse
 
-    parser_arg = argparse.ArgumentParser(description='Generate ICS calendar from scraped HTML')
+    parser_arg = argparse.ArgumentParser(description='Generate ICS calendar from JSON class data')
     parser_arg.add_argument('--test', action='store_true', help='Generate test calendar with only first class')
     parser_arg.add_argument('--output', default='calendar_output.ics', help='Output ICS filename (for single file mode)')
     parser_arg.add_argument('--split', action='store_true', help='Generate 3 separate files by color (F2F.ics, Zoom.ics, Rom.ics)')
     args = parser_arg.parse_args()
 
-    # Parse HTML files
-    print("Parsing HTML files...")
-    parser = CalendarParser()
-    classes = parser.parse_all_pages()
+    # Load JSON file
+    loader = JSONLoader()
+    classes = loader.load_classes()
 
     if not classes:
         print("No classes found!")
@@ -343,12 +275,14 @@ def main():
 
     if args.split:
         # Generate 3 separate files by color
-        print(f"\nGenerating 3 separate ICS files from {len(classes)} classes...")
+        print(f"\nGenerating ICS calendars from {len(classes)} classes...")
 
         # Count events by color
+        print("  Categorizing classes by type...", end=" ", flush=True)
         blue_count = len([c for c in classes if generator.assign_color(c) == generator.COLOR_BLUE])
         yellow_count = len([c for c in classes if generator.assign_color(c) == generator.COLOR_YELLOW])
         red_count = len([c for c in classes if generator.assign_color(c) == generator.COLOR_RED])
+        print("done")
 
         total_events = blue_count + yellow_count + red_count
         if total_events == 0:
@@ -360,27 +294,27 @@ def main():
             return 1
 
         # Blue - Zoom classes
+        print(f"  Generating Zoom.ics ({blue_count} classes)...", end=" ", flush=True)
         blue_cal = generator.generate_calendar(classes, calendar_name='Zoom Classes', color_filter=generator.COLOR_BLUE)
         generator.save_calendar(blue_cal, 'Zoom.ics')
-        print(f"  - Zoom.ics: {blue_count} classes (Blue)")
+        print("done")
 
         # Yellow - Monday classes (Rom)
+        print(f"  Generating Rom.ics ({yellow_count} classes)...", end=" ", flush=True)
         yellow_cal = generator.generate_calendar(classes, calendar_name='Rom Classes', color_filter=generator.COLOR_YELLOW)
         generator.save_calendar(yellow_cal, 'Rom.ics')
-        print(f"  - Rom.ics: {yellow_count} classes (Yellow - Monday)")
+        print("done")
 
         # Red - F2F classes
+        print(f"  Generating F2F.ics ({red_count} classes)...", end=" ", flush=True)
         red_cal = generator.generate_calendar(classes, calendar_name='F2F Classes', color_filter=generator.COLOR_RED)
         generator.save_calendar(red_cal, 'F2F.ics')
-        print(f"  - F2F.ics: {red_count} classes (Red - Face-to-Face)")
+        print("done")
 
-        print(f"\n{'='*80}")
-        print("Success! Import each ICS file to a separate Google Calendar:")
-        print("  1. Create 3 calendars in Google Calendar (or use existing ones)")
-        print("  2. Import Zoom.ics → Set calendar color to BLUE")
-        print("  3. Import Rom.ics → Set calendar color to YELLOW")
-        print("  4. Import F2F.ics → Set calendar color to RED")
-        print('='*80)
+        print(f"\n✓ Successfully generated 3 ICS files:")
+        print(f"  - Zoom.ics: {blue_count} Zoom/online classes")
+        print(f"  - Rom.ics: {yellow_count} Monday classes")
+        print(f"  - F2F.ics: {red_count} in-person classes")
 
     else:
         # Generate single file (original behavior)

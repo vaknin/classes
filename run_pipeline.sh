@@ -104,7 +104,13 @@ main() {
         exit 1
     fi
 
-    # Step 2: Generate ICS files (capture output, only show on error)
+    # Step 2: Parse HTML to JSON (capture output, only show on error)
+    if ! uv run python "$SCRIPT_DIR/parse_html.py" >> "$LOG_FILE" 2>&1; then
+        error "HTML parsing to JSON failed. Check $LOG_FILE for details."
+        exit 1
+    fi
+
+    # Step 3: Generate ICS files (capture output, only show on error)
     if ! uv run python "$SCRIPT_DIR/generate_ics.py" --split >> "$LOG_FILE" 2>&1; then
         error "ICS generation failed. Check $LOG_FILE for details."
         exit 1

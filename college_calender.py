@@ -88,7 +88,7 @@ class CollegeCalendarScraper:
             if 'כניסה למערכת' in response.text or 'התחברות' in response.text:
                 raise ValueError("Session cookies are invalid - login page detected")
 
-            print("Session validation successful")
+            print("✓ Session validation successful")
             return True
 
         except requests.exceptions.RequestException as e:
@@ -276,24 +276,35 @@ class CollegeCalendarScraper:
 
         # Then POST with form data to get the first page of results
         if initial_form_data:
+            print(f"  Applying filters (from {initial_form_data.get('ctl00$OLToolBar1$ctl03$dtFromDate$dtdtFromDate')})")
             html = self.fetch_page(page_num=None, form_data=initial_form_data)
             self.viewstate_data = self.extract_form_fields(html)
 
         pages.append(html)
         previous_data_rows = self.get_data_rows(html)
+        print(f"  Page 1: {len(previous_data_rows)} classes found")
 
         # Keep fetching pages until there's no next page
         while self.has_next_page(html, current_page):
             current_page += 1
-            print(f"Fetching page {current_page}...")
+            print(f"Fetching page {current_page}...", end=" ", flush=True)
 
-            html = self.fetch_page(current_page)
+            # For pagination, only send filter fields, not the button click
+            pagination_form_data = None
+            if initial_form_data:
+                pagination_form_data = {
+                    'ctl00$cmbActiveYear': initial_form_data.get('ctl00$cmbActiveYear'),
+                    'ctl00$OLToolBar1$ctl03$dtFromDate$dtdtFromDate': initial_form_data.get('ctl00$OLToolBar1$ctl03$dtFromDate$dtdtFromDate'),
+                    'ctl00$OLToolBar1$ctl03$dtToDate$dtdtToDate': initial_form_data.get('ctl00$OLToolBar1$ctl03$dtToDate$dtdtToDate'),
+                }
+
+            html = self.fetch_page(current_page, form_data=pagination_form_data)
 
             # Check if we got the same data (duplicate detection)
             # Compare actual data content, not HTML (ViewState changes every time)
             current_data_rows = self.get_data_rows(html)
             if current_data_rows == previous_data_rows:
-                print(f"Detected duplicate data - stopping at page {current_page - 1}")
+                print(f"duplicate detected - stopping")
                 break
 
             # Update ViewState for next request
@@ -301,14 +312,15 @@ class CollegeCalendarScraper:
 
             pages.append(html)
             previous_data_rows = current_data_rows
+            print(f"{len(current_data_rows)} classes")
 
             # No sleep needed - requests.Session handles connection pooling
             # and retry logic handles rate limiting if needed
 
-        print(f"Successfully fetched {len(pages)} pages")
+        print(f"✓ Successfully fetched {len(pages)} pages")
         return pages
 
-    def save_pages(self, pages, output_dir='output'):
+    def save_pages(self, pages, output_dir='output/html'):
         """
         Save HTML pages to files
 
@@ -328,7 +340,7 @@ class CollegeCalendarScraper:
             with open(filename, 'w', encoding='utf-8') as f:
                 f.write(page)
 
-        print(f"Saved {len(pages)} pages to {output_dir}/")
+        print(f"✓ Saved {len(pages)} pages to {output_dir}/")
 
 
 def load_cookies():
