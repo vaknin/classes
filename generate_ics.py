@@ -8,6 +8,16 @@ from pathlib import Path
 import json
 from icalendar import Calendar, Event
 
+# Try to import tomllib (Python 3.11+) or tomli
+try:
+    import tomllib as toml
+except ImportError:
+    try:
+        import tomli as toml
+    except ImportError:
+        print("Error: 'tomli' module not found. Please install it with: pip install tomli")
+        exit(1)
+
 
 class JSONLoader:
     """Load class data from JSON file"""
@@ -62,22 +72,68 @@ class JSONLoader:
 class ICSGenerator:
     """Generate ICS calendar files with color coding"""
 
-    # Google Calendar color IDs
-    COLOR_BLUE = 9  # Blueberry - for Zoom classes
-    COLOR_YELLOW = 5  # Banana - for Monday classes
-    COLOR_RED = 11  # Tomato - for all other classes
+    def __init__(self, rules_file='RULES.toml'):
+        """
+        Initialize the ICS generator and load rules
 
-    def __init__(self):
-        """Initialize the ICS generator"""
-        pass
+        Args:
+            rules_file: Path to TOML rules file
+        """
+        self.rules_file = Path(rules_file)
+        self.config = self.load_rules()
+        self.colors = self.config.get('colors', {})
+        self.rules = self.config.get('rules', [])
+        self.course_overrides = self.config.get('courses', {})
+        
+        # Default colors if not specified
+        if not self.colors:
+            self.colors = {
+                'blue': 9,
+                'yellow': 5,
+                'red': 11
+            }
+
+    def load_rules(self):
+        """Load rules from TOML file"""
+        if not self.rules_file.exists():
+            print(f"Warning: {self.rules_file} not found. Using default hardcoded rules.")
+            return {
+                'defaults': {'default_color': 11},
+                'colors': {'blue': 9, 'yellow': 5, 'red': 11},
+                'rules': [
+                    {'name': 'Sync Online', 'condition': "'מקוון סינכרוני' in course_name", 'color': 'blue'},
+                    {'name': 'Zoom Note', 'condition': "'זום' in note.lower()", 'color': 'blue'},
+                    {'name': 'Monday Class', 'condition': "day == \"ב'\"", 'color': 'yellow'}
+                ]
+            }
+        
+        try:
+            with open(self.rules_file, 'rb') as f:
+                return toml.load(f)
+        except Exception as e:
+            print(f"Error loading {self.rules_file}: {e}")
+            exit(1)
+
+    def get_color_id(self, color_name_or_id):
+        """Resolve color name to ID"""
+        if isinstance(color_name_or_id, int):
+            return color_name_or_id
+        
+        # Try to look up name in colors map
+        if str(color_name_or_id) in self.colors:
+            return self.colors[str(color_name_or_id)]
+            
+        # If it's a digit string, return as int
+        if str(color_name_or_id).isdigit():
+            return int(color_name_or_id)
+            
+        # Default fallback
+        return self.config.get('defaults', {}).get('default_color', 11)
 
     def assign_color(self, class_info):
         """
-        Assign color to a class based on rules:
-        1. Blue if course is sync online (מקוון סינכרוני) - HIGHEST PRIORITY
-        2. Blue if note contains "זום"
-        3. Yellow if day is "ב'" (Monday)
-        4. Red for everything else
+        Assign color to a class based on rules from TOML
+        Priority: date-specific color > course override > rules > default
 
         Args:
             class_info: Dictionary with class information
@@ -85,20 +141,53 @@ class ICSGenerator:
         Returns:
             Color ID (integer 1-11)
         """
-        # Rule 1a: Special sync online course is blue (even on Monday)
-        if 'מקוון סינכרוני' in class_info['course_name']:
-            return self.COLOR_BLUE
+        # Prepare variables for eval context
+        context = {
+            'course_name': class_info.get('course_name', ''),
+            'class_id': class_info.get('class_id', ''),
+            'note': class_info.get('note', ''),
+            'day': class_info.get('day', ''),
+            'room': class_info.get('room', ''),
+            'teachers': class_info.get('teachers', '')
+        }
 
-        # Rule 1b: Zoom classes are blue
-        if 'זום' in class_info['note'].lower():
-            return self.COLOR_BLUE
+        # Check date-specific color rules first (highest priority)
+        date_rules = self.config.get('courses', {}).get('date_rules', {})
+        if context['class_id'] and str(context['class_id']) in date_rules:
+            rule = date_rules[str(context['class_id'])]
+            class_date = class_info.get('date')  # DD/MM/YYYY format
 
-        # Rule 2: Monday classes are yellow
-        if class_info['day'] == "ב'":
-            return self.COLOR_YELLOW
+            # Check if there's a color override for this specific date
+            if 'dates' in rule and class_date in rule['dates']:
+                date_config = rule['dates'][class_date]
+                if 'color' in date_config:
+                    return self.get_color_id(date_config['color'])
 
-        # Rule 3: Everything else is red
-        return self.COLOR_RED
+        # Check course overrides (optional color override)
+        # Check by ID first (exact match)
+        if context['class_id'] and str(context['class_id']) in self.course_overrides:
+            override = self.course_overrides[str(context['class_id'])]
+            if 'color' in override:
+                return self.get_color_id(override['color'])
+
+        # Check by Name (substring)
+        for course_key, override in self.course_overrides.items():
+            if course_key in context['course_name']:
+                if 'color' in override:
+                    return self.get_color_id(override['color'])
+
+        # Evaluate rules in order
+        for rule in self.rules:
+            try:
+                condition = rule.get('condition', 'False')
+                if eval(condition, {}, context):
+                    return self.get_color_id(rule.get('color'))
+            except Exception as e:
+                print(f"Warning: Error evaluating rule '{rule.get('name')}': {e}")
+                continue
+
+        # Default color
+        return self.get_color_id(self.config.get('defaults', {}).get('default_color', 11))
 
     def create_event(self, class_info):
         """
@@ -146,11 +235,38 @@ class ICSGenerator:
         # Build description with teacher and notes
         description_parts = []
 
+        if class_info.get('class_id'):
+             description_parts.append(f"מזהה קורס: {class_info['class_id']}")
+
         if class_info['teachers']:
             description_parts.append(f"מרצה: {class_info['teachers']}")
 
         if class_info['note']:
             description_parts.append(f"הערה: {class_info['note']}")
+            
+        # Check for course overrides (links and extra descriptions)
+        # Check by ID first
+        class_id = class_info.get('class_id')
+        override_found = False
+        
+        if class_id and str(class_id) in self.course_overrides:
+            override = self.course_overrides[str(class_id)]
+            if 'link' in override:
+                description_parts.append(f"Zoom Link: {override['link']}")
+            if 'description' in override:
+                description_parts.append(f"{override['description']}")
+            override_found = True
+            
+        # Check by Name (substring) if not found by ID (or should we allow both?)
+        # Let's allow both, but maybe avoid duplicates if they map to same
+        if not override_found:
+            for course_key, override in self.course_overrides.items():
+                if course_key in class_info['course_name']:
+                    if 'link' in override:
+                        description_parts.append(f"Zoom Link: {override['link']}")
+                    
+                    if 'description' in override:
+                        description_parts.append(f"{override['description']}")
 
         if description_parts:
             event.add('description', '\n'.join(description_parts))
@@ -172,20 +288,40 @@ class ICSGenerator:
 
     def get_color_name(self, color_id):
         """Get color name from ID"""
-        color_names = {
-            1: 'Lavender',
-            2: 'Sage',
-            3: 'Grape',
-            4: 'Flamingo',
-            5: 'Yellow-Monday',
-            6: 'Tangerine',
-            7: 'Peacock',
-            8: 'Graphite',
-            9: 'Blue-Zoom',
-            10: 'Basil',
-            11: 'Tomato'
-        }
-        return color_names.get(color_id, 'Default')
+        # Reverse lookup from colors dict
+        for name, cid in self.colors.items():
+            if cid == color_id:
+                return name.capitalize()
+        return 'Default'
+
+    def should_include_class(self, class_info):
+        """
+        Check if a class should be included based on date filtering rules
+
+        Args:
+            class_info: Dictionary with class information
+
+        Returns:
+            True if class should be included, False to filter it out
+        """
+        class_id = class_info.get('class_id')
+        if not class_id:
+            return True
+
+        # Check if there's a date rule for this class
+        date_rules = self.config.get('courses', {}).get('date_rules', {})
+
+        # Check by exact class ID match
+        if str(class_id) in date_rules:
+            rule = date_rules[str(class_id)]
+            if 'include_dates' in rule:
+                # If include_dates list is specified, only include classes on those dates
+                allowed_dates = rule['include_dates']
+                class_date = class_info.get('date')  # DD/MM/YYYY format
+                return class_date in allowed_dates
+
+        # No date restrictions, include the class
+        return True
 
     def generate_calendar(self, classes, calendar_name='College Calendar', color_filter=None):
         """
@@ -207,14 +343,20 @@ class ICSGenerator:
         cal.add('X-WR-CALNAME', calendar_name)
         cal.add('X-WR-TIMEZONE', 'Asia/Jerusalem')
 
-        # Filter classes by color if specified
+        # Filter classes by date restrictions first
+        date_filtered_classes = [
+            class_info for class_info in classes
+            if self.should_include_class(class_info)
+        ]
+
+        # Then filter by color if specified
         if color_filter is not None:
             filtered_classes = [
-                class_info for class_info in classes
+                class_info for class_info in date_filtered_classes
                 if self.assign_color(class_info) == color_filter
             ]
         else:
-            filtered_classes = classes
+            filtered_classes = date_filtered_classes
 
         # Add each class as an event
         for class_info in filtered_classes:
@@ -242,10 +384,13 @@ class ICSGenerator:
         print("Color Assignment Summary:")
         print("="*80)
 
-        print("\nColor Rules:")
-        print(f"  - Zoom classes (note contains 'זום'): Blue (ID {self.COLOR_BLUE})")
-        print(f"  - Monday classes (day 'ב'): Yellow (ID {self.COLOR_YELLOW})")
-        print(f"  - All other classes: Red (ID {self.COLOR_RED})")
+        print("\nActive Rules (from RULES.toml):")
+        for rule in self.rules:
+            print(f"  - {rule.get('name')}: {rule.get('color')}")
+            
+        print("\nCourse Overrides:")
+        for course, override in self.course_overrides.items():
+            print(f"  - {course}: {override}")
 
 
 def main():
@@ -276,45 +421,74 @@ def main():
     if args.split:
         # Generate 3 separate files by color
         print(f"\nGenerating ICS calendars from {len(classes)} classes...")
+        
+        # Get configured colors for splitting
+        # We need to know which colors map to which files
+        # This is a bit tricky with dynamic rules, so we'll stick to the original 3 categories for now
+        # or we could make this configurable too.
+        # For now, let's assume the standard 3: Blue (Zoom), Yellow (Rom), Red (F2F)
+        
+        blue_id = generator.get_color_id('blue')
+        yellow_id = generator.get_color_id('yellow')
+        red_id = generator.get_color_id('red')
 
         # Count events by color
         print("  Categorizing classes by type...", end=" ", flush=True)
-        blue_count = len([c for c in classes if generator.assign_color(c) == generator.COLOR_BLUE])
-        yellow_count = len([c for c in classes if generator.assign_color(c) == generator.COLOR_YELLOW])
-        red_count = len([c for c in classes if generator.assign_color(c) == generator.COLOR_RED])
+        blue_count = len([c for c in classes if generator.assign_color(c) == blue_id])
+        yellow_count = len([c for c in classes if generator.assign_color(c) == yellow_id])
+        red_count = len([c for c in classes if generator.assign_color(c) == red_id])
+        
+        # Count others?
+        other_count = len([c for c in classes if generator.assign_color(c) not in [blue_id, yellow_id, red_id]])
+        
         print("done")
 
-        total_events = blue_count + yellow_count + red_count
+        total_events = blue_count + yellow_count + red_count + other_count
         if total_events == 0:
             print("ERROR: No events generated! Check date range and HTML parsing.")
-            print("This could mean:")
-            print("  - No classes in the scraped date range")
-            print("  - HTML structure has changed")
-            print("  - All classes were filtered out (00:00 start time)")
             return 1
 
         # Blue - Zoom classes
         print(f"  Generating Zoom.ics ({blue_count} classes)...", end=" ", flush=True)
-        blue_cal = generator.generate_calendar(classes, calendar_name='Zoom Classes', color_filter=generator.COLOR_BLUE)
+        blue_cal = generator.generate_calendar(classes, calendar_name='Zoom Classes', color_filter=blue_id)
         generator.save_calendar(blue_cal, 'Zoom.ics')
         print("done")
 
         # Yellow - Monday classes (Rom)
         print(f"  Generating Rom.ics ({yellow_count} classes)...", end=" ", flush=True)
-        yellow_cal = generator.generate_calendar(classes, calendar_name='Rom Classes', color_filter=generator.COLOR_YELLOW)
+        yellow_cal = generator.generate_calendar(classes, calendar_name='Rom Classes', color_filter=yellow_id)
         generator.save_calendar(yellow_cal, 'Rom.ics')
         print("done")
 
         # Red - F2F classes
         print(f"  Generating F2F.ics ({red_count} classes)...", end=" ", flush=True)
-        red_cal = generator.generate_calendar(classes, calendar_name='F2F Classes', color_filter=generator.COLOR_RED)
+        red_cal = generator.generate_calendar(classes, calendar_name='F2F Classes', color_filter=red_id)
         generator.save_calendar(red_cal, 'F2F.ics')
         print("done")
+        
+        if other_count > 0:
+             print(f"  Generating Other.ics ({other_count} classes)...", end=" ", flush=True)
+             # Filter for anything not in the main 3
+             other_cal = Calendar()
+             other_cal.add('prodid', '-//College Calendar Importer//EN')
+             other_cal.add('version', '2.0')
+             other_cal.add('X-WR-CALNAME', 'Other Classes')
+             
+             for class_info in classes:
+                 cid = generator.assign_color(class_info)
+                 if cid not in [blue_id, yellow_id, red_id]:
+                     event = generator.create_event(class_info)
+                     other_cal.add_component(event)
+                     
+             generator.save_calendar(other_cal, 'Other.ics')
+             print("done")
 
-        print(f"\n✓ Successfully generated 3 ICS files:")
+        print(f"\n✓ Successfully generated ICS files:")
         print(f"  - Zoom.ics: {blue_count} Zoom/online classes")
         print(f"  - Rom.ics: {yellow_count} Monday classes")
         print(f"  - F2F.ics: {red_count} in-person classes")
+        if other_count > 0:
+            print(f"  - Other.ics: {other_count} other classes")
 
     else:
         # Generate single file (original behavior)

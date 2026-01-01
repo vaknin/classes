@@ -342,6 +342,46 @@ class CollegeCalendarScraper:
 
         print(f"✓ Saved {len(pages)} pages to {output_dir}/")
 
+    def fetch_period_schedule(self):
+        """
+        Fetch the period schedule page which contains Class IDs
+        
+        Returns:
+            HTML content of the page
+        """
+        print("Fetching period schedule...", end=" ", flush=True)
+        # Replace the last part of the URL
+        period_url = self.url.replace('StudentScheduleList.aspx', 'StudentPeriodSchedule.aspx')
+        
+        try:
+            response = self.session.get(period_url, timeout=self.timeout)
+            response.raise_for_status()
+            print("done")
+            return response.text
+        except Exception as e:
+            print(f"failed: {e}")
+            return None
+
+    def save_period_schedule(self, html, output_dir='output/html'):
+        """
+        Save period schedule HTML to file
+        
+        Args:
+            html: HTML content
+            output_dir: Directory to save page to
+        """
+        if not html:
+            return
+            
+        import os
+        os.makedirs(output_dir, exist_ok=True)
+        
+        filename = f"{output_dir}/period_schedule.html"
+        with open(filename, 'w', encoding='utf-8') as f:
+            f.write(html)
+            
+        print(f"✓ Saved period schedule to {filename}")
+
 
 def load_cookies():
     """Load cookies from .cookies.json file"""
@@ -422,6 +462,11 @@ def main():
 
     # Save pages
     scraper.save_pages(pages)
+
+    # Scrape period schedule (for Class IDs)
+    period_html = scraper.fetch_period_schedule()
+    if period_html:
+        scraper.save_period_schedule(period_html)
 
     print("\nDone! You can now parse the HTML files to extract the calendar data.")
 

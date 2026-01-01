@@ -49,6 +49,9 @@ error() {
 
 success() {
     log "${GREEN}SUCCESS: $1${NC}"
+    if command -v dunstify &> /dev/null; then
+        dunstify -u normal -a "College Calendar" "Pipeline Success" "$1"
+    fi
 }
 
 info() {
@@ -58,6 +61,9 @@ info() {
 # Error handler
 handle_error() {
     error "Pipeline failed at step: $1"
+    if command -v dunstify &> /dev/null; then
+        dunstify -u critical -a "College Calendar" "Pipeline Failed" "Step: $1\nCheck logs/pipeline.log for details."
+    fi
     exit 1
 }
 
@@ -71,6 +77,9 @@ main() {
 
     # Check if uv is available
     if ! command -v uv &> /dev/null; then
+        if command -v dunstify &> /dev/null; then
+            dunstify -u critical -a "College Calendar" "Pipeline Error" "uv is not installed or not in PATH."
+        fi
         error "uv is not installed or not in PATH."
         error "Install with: curl -LsSf https://astral.sh/uv/install.sh | sh"
         exit 1
@@ -78,6 +87,9 @@ main() {
 
     # Check if .env exists
     if [[ ! -f "$SCRIPT_DIR/.env" ]]; then
+        if command -v dunstify &> /dev/null; then
+            dunstify -u critical -a "College Calendar" "Configuration Error" ".env file not found!"
+        fi
         error ".env file not found!"
         error "Copy .env.example to .env and fill in your credentials:"
         error "  cp .env.example .env"
@@ -88,8 +100,7 @@ main() {
     # Step 0: Refresh session cookies
     log "Refreshing session cookies..."
     if ! uv run python "$SCRIPT_DIR/refresh_cookies.py" >> "$LOG_FILE" 2>&1; then
-        error "Cookie refresh failed. Check credentials in .env and $LOG_FILE for details."
-        exit 1
+        handle_error "Cookie Refresh (check credentials in .env)"
     fi
 
     # Check if we're in a git repo (only if not dry run)
@@ -100,20 +111,23 @@ main() {
 
     # Step 1: Scrape HTML pages (capture output, only show on error)
     if ! uv run python "$SCRIPT_DIR/college_calender.py" >> "$LOG_FILE" 2>&1; then
-        error "HTML scraping failed. Check $LOG_FILE for details."
-        exit 1
+        handle_error "HTML Scraping"
     fi
 
     # Step 2: Parse HTML to JSON (capture output, only show on error)
     if ! uv run python "$SCRIPT_DIR/parse_html.py" >> "$LOG_FILE" 2>&1; then
-        error "HTML parsing to JSON failed. Check $LOG_FILE for details."
-        exit 1
+        handle_error "HTML Parsing"
+    fi
+
+    # Step 2.5: Validate RULES.toml against actual classes
+    log "Validating RULES.toml configuration..."
+    if ! uv run python "$SCRIPT_DIR/validate_rules.py"; then
+        handle_error "RULES.toml Validation"
     fi
 
     # Step 3: Generate ICS files (capture output, only show on error)
     if ! uv run python "$SCRIPT_DIR/generate_ics.py" --split >> "$LOG_FILE" 2>&1; then
-        error "ICS generation failed. Check $LOG_FILE for details."
-        exit 1
+        handle_error "ICS Generation"
     fi
 
     # Exit here if dry run

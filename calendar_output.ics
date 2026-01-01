@@ -1,0 +1,18 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//College Calendar Importer//EN
+X-WR-CALNAME:College Calendar
+X-WR-TIMEZONE:Asia/Jerusalem
+BEGIN:VEVENT
+SUMMARY:הוראת האנגלית לאוכלוסיות שונות צרכי
+ ם
+DTSTART:20251125T163000
+DTEND:20251125T180000
+CATEGORIES:Green
+DESCRIPTION:מזהה קורס: 1855555-62142\nמרצה: ווסטרייך 
+ אורנה\nהערה: זום\nZoom Link: https://zoom.us/j/REAL_TEST_LINK\
+ nReal ID Match Successful
+X-GOOGLE-CALENDAR-COLOR-ID:10
+X-GOOGLE-CALENDAR-CONTENT-COLOR:10
+END:VEVENT
+END:VCALENDAR

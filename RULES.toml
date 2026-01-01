@@ -1,0 +1,71 @@
+# College Calendar Rules Configuration
+
+# Default settings
+[defaults]
+default_color = 11 # Red
+
+# Color definitions (mapping names to Google Calendar IDs)
+[colors]
+blue = 9      # Blueberry - for Zoom classes
+yellow = 5    # Banana - for Monday classes
+red = 11      # Tomato - for all other classes
+green = 10    # Basil
+lavender = 1
+sage = 2
+grape = 3
+flamingo = 4
+tangerine = 6
+peacock = 7
+graphite = 8
+
+# Rules are evaluated in order. First match wins.
+[[rules]]
+name = "Sync Online"
+condition = "'מקוון סינכרוני' in course_name"
+color = "blue"
+
+[[rules]]
+name = "Zoom Note"
+condition = "'זום' in note.lower()"
+color = "blue"
+
+[[rules]]
+name = "Monday Class"
+condition = "day == \"ב'\""
+color = "yellow"
+
+# Course-specific overrides (e.g. for Zoom links)
+# keys can be the Class ID (exact match) or substrings of the course name
+[courses]
+# "1855555-62142" = { link = "https://gordonacademy.zoom.us/j/87485297174?pwd=YztJV25j0PFAUr55opUAxVOo5ZuVyk.1", color = "blue" }
+"6211111-ENGA" = { link = "https://gordonacademy.zoom.us/j/82191749697?pwd=TaNGYOHkMHK3M0z7B6PatdobPkhXrr.1", color = "blue" }
+
+# Date-specific rules for classes
+# Allows filtering by specific dates and assigning different colors per date
+
+[courses.date_rules."1857777-62139"]
+include_dates = ["04/11/2025", "11/11/2025", "09/12/2025", "01/01/2026", "16/01/2026", "20/01/2026"]
+
+[courses.date_rules."1857777-62139".dates."04/11/2025"]
+color = "blue"
+description = "Lesson 1 - Zoom"
+
+[courses.date_rules."1857777-62139".dates."11/11/2025"]
+color = "red"
+description = "Lesson 2 - Gordon"
+
+[courses.date_rules."1857777-62139".dates."09/12/2025"]
+color = "blue"
+description = "Lesson 3 - Zoom"
+
+[courses.date_rules."1857777-62139".dates."01/01/2026"]
+color = "red"
+description = "Lesson 4 - Gordon"
+
+[courses.date_rules."1857777-62139".dates."16/01/2026"]
+color = "red"
+description = "Tour"
+
+[courses.date_rules."1857777-62139".dates."20/01/2026"]
+color = "red"
+description = "Lesson 5 - Gordon"

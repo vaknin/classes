@@ -24,6 +24,56 @@ class HTMLToJSONParser:
         self.input_dir = Path(input_dir)
         self.output_dir = Path(output_dir)
 
+    def parse_period_schedule(self):
+        """
+        Parse the period schedule file to extract Class IDs
+        
+        Returns:
+            Dictionary mapping course name to class ID
+        """
+        period_file = self.input_dir / 'period_schedule.html'
+        if not period_file.exists():
+            print(f"Warning: {period_file} not found. Class IDs will not be available.")
+            return {}
+            
+        print(f"Parsing period schedule for Class IDs...", end=" ", flush=True)
+        
+        with open(period_file, 'r', encoding='utf-8') as f:
+            html = f.read()
+            
+        soup = BeautifulSoup(html, 'html.parser')
+        
+        # Find the data table - usually id="ContentPlaceHolder1_gvData" or similar
+        # Real file has id="ContentPlaceHolder1_PeriodScheduleA_gvPeriodSchedule"
+        table = soup.find('table', {'id': lambda x: x and 'gvPeriodSchedule' in x})
+        
+        if not table:
+            print("failed (table not found)")
+            return {}
+            
+        name_to_id = {}
+        
+        # Iterate rows
+        rows = table.find_all('tr', class_='GridRow')
+        for row in rows:
+            cells = row.find_all('td')
+            if not cells or len(cells) < 4:
+                continue
+                
+            # Column 2: Course Name
+            # Column 3: Course Code (ID)
+            course_name = cells[2].get_text(strip=True)
+            class_id = cells[3].get_text(strip=True)
+            
+            if course_name and class_id:
+                name_to_id[course_name] = class_id
+                    
+        print(f"done (found {len(name_to_id)} IDs)")
+        return name_to_id
+                    
+        print(f"done (found {len(name_to_id)} IDs)")
+        return name_to_id
+
     def parse_all_pages(self):
         """
         Parse all HTML pages and extract class data
@@ -40,10 +90,33 @@ class HTMLToJSONParser:
             print(f"No HTML files found in {self.input_dir}/")
             return []
 
+        # Parse period schedule first to get IDs
+        name_to_id = self.parse_period_schedule()
+
         print(f"Parsing {len(html_files)} HTML files...")
 
         for i, html_file in enumerate(html_files, 1):
             classes = self.parse_page(html_file)
+            
+            # Inject Class IDs
+            for class_info in classes:
+                name = class_info['course_name']
+                # Try exact match
+                if name in name_to_id:
+                    class_info['class_id'] = name_to_id[name]
+                else:
+                    # Try fuzzy match? Or just leave empty
+                    # Maybe the name in period schedule is slightly different
+                    # Let's try to find if any key is a substring of name or vice versa
+                    found = False
+                    for k, v in name_to_id.items():
+                        if k in name or name in k:
+                            class_info['class_id'] = v
+                            found = True
+                            break
+                    if not found:
+                        class_info['class_id'] = None
+
             all_classes.extend(classes)
             if i % 5 == 0 or i == len(html_files):
                 print(f"  Processed {i}/{len(html_files)} files ({len(all_classes)} classes so far)")

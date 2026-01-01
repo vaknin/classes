@@ -1,0 +1,91 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//College Calendar Importer//EN
+X-WR-CALNAME:Other Classes
+BEGIN:VEVENT
+SUMMARY:הוראת האנגלית לאוכלוסיות שונות צרכי
+ ם
+DTSTART:20251125T163000
+DTEND:20251125T180000
+CATEGORIES:Green
+DESCRIPTION:מזהה קורס: 1855555-62142\nמרצה: ווסטרייך 
+ אורנה\nהערה: זום\nZoom Link: https://zoom.us/j/REAL_TEST_LINK\
+ nReal ID Match Successful
+X-GOOGLE-CALENDAR-COLOR-ID:10
+X-GOOGLE-CALENDAR-CONTENT-COLOR:10
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:הוראת האנגלית לאוכלוסיות שונות צרכי
+ ם
+DTSTART:20251202T163000
+DTEND:20251202T180000
+CATEGORIES:Green
+DESCRIPTION:מזהה קורס: 1855555-62142\nמרצה: ווסטרייך 
+ אורנה\nהערה: זום\nZoom Link: https://zoom.us/j/REAL_TEST_LINK\
+ nReal ID Match Successful
+X-GOOGLE-CALENDAR-COLOR-ID:10
+X-GOOGLE-CALENDAR-CONTENT-COLOR:10
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:הוראת האנגלית לאוכלוסיות שונות צרכי
+ ם
+DTSTART:20251209T163000
+DTEND:20251209T180000
+CATEGORIES:Green
+DESCRIPTION:מזהה קורס: 1855555-62142\nמרצה: ווסטרייך 
+ אורנה\nהערה: זום\nZoom Link: https://zoom.us/j/REAL_TEST_LINK\
+ nReal ID Match Successful
+X-GOOGLE-CALENDAR-COLOR-ID:10
+X-GOOGLE-CALENDAR-CONTENT-COLOR:10
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:הוראת האנגלית לאוכלוסיות שונות צרכי
+ ם
+DTSTART:20251223T163000
+DTEND:20251223T180000
+CATEGORIES:Green
+DESCRIPTION:מזהה קורס: 1855555-62142\nמרצה: ווסטרייך 
+ אורנה\nהערה: זום\nZoom Link: https://zoom.us/j/REAL_TEST_LINK\
+ nReal ID Match Successful
+X-GOOGLE-CALENDAR-COLOR-ID:10
+X-GOOGLE-CALENDAR-CONTENT-COLOR:10
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:הוראת האנגלית לאוכלוסיות שונות צרכי
+ ם
+DTSTART:20251230T163000
+DTEND:20251230T180000
+CATEGORIES:Green
+DESCRIPTION:מזהה קורס: 1855555-62142\nמרצה: ווסטרייך 
+ אורנה\nהערה: זום\nZoom Link: https://zoom.us/j/REAL_TEST_LINK\
+ nReal ID Match Successful
+X-GOOGLE-CALENDAR-COLOR-ID:10
+X-GOOGLE-CALENDAR-CONTENT-COLOR:10
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:הוראת האנגלית לאוכלוסיות שונות צרכי
+ ם
+DTSTART:20260106T163000
+DTEND:20260106T180000
+CATEGORIES:Green
+DESCRIPTION:מזהה קורס: 1855555-62142\nמרצה: ווסטרייך 
+ אורנה\nהערה: שיעור במכללה\nZoom Link: https://zoom.us/
+ j/REAL_TEST_LINK\nReal ID Match Successful
+LOCATION:*** - מרכז אנגלית 201
+X-GOOGLE-CALENDAR-COLOR-ID:10
+X-GOOGLE-CALENDAR-CONTENT-COLOR:10
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:הוראת האנגלית לאוכלוסיות שונות צרכי
+ ם
+DTSTART:20260120T163000
+DTEND:20260120T180000
+CATEGORIES:Green
+DESCRIPTION:מזהה קורס: 1855555-62142\nמרצה: ווסטרייך 
+ אורנה\nהערה: שיעור במכללה\nZoom Link: https://zoom.us/
+ j/REAL_TEST_LINK\nReal ID Match Successful
+LOCATION:*** - מרכז אנגלית 201
+X-GOOGLE-CALENDAR-COLOR-ID:10
+X-GOOGLE-CALENDAR-CONTENT-COLOR:10
+END:VEVENT
+END:VCALENDAR
