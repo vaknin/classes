@@ -82,7 +82,9 @@ DTSTART:20260101T121500
 DTEND:20260101T134500
 CATEGORIES:Blue
 DESCRIPTION:מזהה קורס: 1852621-ENGA\nמרצה: ווסטרייך א
- ורנה\nהערה: זום
+ ורנה\nהערה: זום\nZoom Link: https://gordonacademy.zoom.us/j/838
+ 53452453?pwd=eCBVCtxK06omm0GUmOaa817W9UcRoM.1&uname=Aviv%20Vaknin&uemail=v
+ aknins33%40gmail.com
 X-GOOGLE-CALENDAR-COLOR-ID:9
 X-GOOGLE-CALENDAR-CONTENT-COLOR:9
 END:VEVENT
@@ -110,6 +112,19 @@ X-GOOGLE-CALENDAR-COLOR-ID:9
 X-GOOGLE-CALENDAR-CONTENT-COLOR:9
 END:VEVENT
 BEGIN:VEVENT
+SUMMARY:יסודות בלמידה ובהוראה א
+DTSTART:20260108T121500
+DTEND:20260108T134500
+CATEGORIES:Blue
+DESCRIPTION:מזהה קורס: 1852621-ENGA\nמרצה: ווסטרייך א
+ ורנה\nהערה: שיעור במכללה\nZoom Link: https://gordonacad
+ emy.zoom.us/j/83853452453?pwd=eCBVCtxK06omm0GUmOaa817W9UcRoM.1&uname=Aviv%
+ 20Vaknin&uemail=vaknins33%40gmail.com
+LOCATION:*** - מרכז אנגלית 201
+X-GOOGLE-CALENDAR-COLOR-ID:9
+X-GOOGLE-CALENDAR-CONTENT-COLOR:9
+END:VEVENT
+BEGIN:VEVENT
 SUMMARY:מפילוסופיה לכיתה
 DTSTART:20260119T150000
 DTEND:20260119T163000
@@ -129,6 +144,19 @@ DESCRIPTION:מזהה קורס: 6211111-ENGA\nמרצה: ווסטרייך א
  ורנה\nהערה: שיעור במכללה\nZoom Link: https://gordonacad
  emy.zoom.us/j/82191749697?pwd=TaNGYOHkMHK3M0z7B6PatdobPkhXrr.1
 LOCATION:סדנה - 314
+X-GOOGLE-CALENDAR-COLOR-ID:9
+X-GOOGLE-CALENDAR-CONTENT-COLOR:9
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:יסודות בלמידה ובהוראה א
+DTSTART:20260122T121500
+DTEND:20260122T134500
+CATEGORIES:Blue
+DESCRIPTION:מזהה קורס: 1852621-ENGA\nמרצה: ווסטרייך א
+ ורנה\nהערה: שיעור במכללה\nZoom Link: https://gordonacad
+ emy.zoom.us/j/83853452453?pwd=eCBVCtxK06omm0GUmOaa817W9UcRoM.1&uname=Aviv%
+ 20Vaknin&uemail=vaknins33%40gmail.com
+LOCATION:*** - מרכז אנגלית 201
 X-GOOGLE-CALENDAR-COLOR-ID:9
 X-GOOGLE-CALENDAR-CONTENT-COLOR:9
 END:VEVENT
