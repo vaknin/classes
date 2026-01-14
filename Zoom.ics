@@ -4,18 +4,6 @@ PRODID:-//College Calendar Importer//EN
 X-WR-CALNAME:Zoom Classes
 X-WR-TIMEZONE:Asia/Jerusalem
 BEGIN:VEVENT
-SUMMARY:הבעה בעל-פה באנגלית - א 
-DTSTART:20260106T181500
-DTEND:20260106T194500
-CATEGORIES:Blue
-DESCRIPTION:מזהה קורס: 6211111-ENGA\nמרצה: ווסטרייך א
- ורנה\nהערה: שיעור במכללה\nZoom Link: https://gordonacad
- emy.zoom.us/j/82191749697?pwd=TaNGYOHkMHK3M0z7B6PatdobPkhXrr.1
-LOCATION:סדנה - 314
-X-GOOGLE-CALENDAR-COLOR-ID:9
-X-GOOGLE-CALENDAR-CONTENT-COLOR:9
-END:VEVENT
-BEGIN:VEVENT
 SUMMARY:יסודות בלמידה ובהוראה א
 DTSTART:20260108T121500
 DTEND:20260108T134500
