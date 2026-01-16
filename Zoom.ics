@@ -4,19 +4,6 @@ PRODID:-//College Calendar Importer//EN
 X-WR-CALNAME:Zoom Classes
 X-WR-TIMEZONE:Asia/Jerusalem
 BEGIN:VEVENT
-SUMMARY:יסודות בלמידה ובהוראה א
-DTSTART:20260108T121500
-DTEND:20260108T134500
-CATEGORIES:Blue
-DESCRIPTION:מזהה קורס: 1852621-ENGA\nמרצה: ווסטרייך א
- ורנה\nהערה: שיעור במכללה\nZoom Link: https://gordonacad
- emy.zoom.us/j/83853452453?pwd=eCBVCtxK06omm0GUmOaa817W9UcRoM.1&uname=Aviv%
- 20Vaknin&uemail=vaknins33%40gmail.com
-LOCATION:*** - מרכז אנגלית 201
-X-GOOGLE-CALENDAR-COLOR-ID:9
-X-GOOGLE-CALENDAR-CONTENT-COLOR:9
-END:VEVENT
-BEGIN:VEVENT
 SUMMARY:מפילוסופיה לכיתה
 DTSTART:20260119T150000
 DTEND:20260119T163000
