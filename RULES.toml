@@ -39,6 +39,7 @@ color = "yellow"
 [courses]
 # "1855555-62142" = { link = "https://gordonacademy.zoom.us/j/87485297174?pwd=YztJV25j0PFAUr55opUAxVOo5ZuVyk.1", color = "blue" }
 "6211111-ENGA" = { link = "https://gordonacademy.zoom.us/j/82191749697?pwd=TaNGYOHkMHK3M0z7B6PatdobPkhXrr.1", color = "blue" }
+"1852621-ENGA" = { link = "https://gordonacademy.zoom.us/j/83853452453?pwd=eCBVCtxK06omm0GUmOaa817W9UcRoM.1&uname=Aviv%20Vaknin&uemail=vaknins33%40gmail.com", color = "blue" }
 
 # Date-specific rules for classes
 # Allows filtering by specific dates and assigning different colors per date
